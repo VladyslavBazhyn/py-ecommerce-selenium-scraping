@@ -33,8 +33,21 @@ class Product:
 
 
 def get_single_product(product: WebElement) -> Product:
-    name = product.find_element(By.CLASS_NAME, "title").get_attribute("title")
-    print(name)
+    title = product.find_element(By.CLASS_NAME, "title").get_attribute("title")
+    description = product.find_element(By.CLASS_NAME, "description").text
+    price = float(product.find_element(By.CLASS_NAME, "price").text.replace("$", ""))
+    rating = int(product.find_element(By.CSS_SELECTOR, "p[data-rating]").get_attribute("data-rating"))
+    num_of_reviews = int(product.find_element(By.CLASS_NAME, "review-count").text.split(" ")[0])
+
+    product = Product(
+        title=title,
+        description=description,
+        price=price,
+        rating=rating,
+        num_of_reviews=num_of_reviews
+    )
+
+    return product
 
 
 def get_page_products(link: str) -> list[Product]:
@@ -42,7 +55,7 @@ def get_page_products(link: str) -> list[Product]:
         driver.get(link)
         web_product = driver.find_element(By.CLASS_NAME, "card")
         product = get_single_product(web_product)
-        # print(type(product))
+        print(product)
 
 
 def get_all_products(links: list) -> None:
@@ -52,7 +65,6 @@ def get_all_products(links: list) -> None:
         page_products = get_page_products(link)
 
         with open(file_name, "w", encoding="utf-8") as f:
-            # print(file_name)
             pass
 
 
