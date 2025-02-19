@@ -19,12 +19,18 @@ options.add_argument("--disable-gpu")
 BASE_URL = "https://webscraper.io/"
 HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/")
 
-COMPUTERS_URL = urljoin(HOME_URL, "computers/")
-LAPTOPS_URL = urljoin(COMPUTERS_URL, "laptops")
-TABLETS_URL = urljoin(COMPUTERS_URL, "tablets/")
+HOME_URL_FOR_PARCE = urljoin(BASE_URL, "test-sites/e-commerce/more")
 
-PHONES_URL = urljoin(HOME_URL, "phones/")
-TOUCH_PHONES_URL = urljoin(PHONES_URL, "touch/")
+COMPUTERS_URL = urljoin(HOME_URL, "computers")
+LAPTOPS_URL = urljoin(HOME_URL, "computers/laptops")
+TABLETS_URL = urljoin(HOME_URL, "computers/tablets")
+
+PHONES_URL = urljoin(HOME_URL, "phones")
+TOUCH_PHONES_URL = urljoin(HOME_URL, "phones/touch")
+
+ALL_LINKS = [
+    HOME_URL_FOR_PARCE, COMPUTERS_URL, LAPTOPS_URL, TABLETS_URL, PHONES_URL, TOUCH_PHONES_URL
+]
 
 
 @dataclass
@@ -42,7 +48,6 @@ def get_single_product(product: WebElement) -> Product:
     price = float(product.find_element(By.CLASS_NAME, "price").text.replace("$", ""))
     rating = len(product.find_elements(By.CLASS_NAME, "ws-icon-star"))
     num_of_reviews = int(product.find_element(By.CLASS_NAME, "review-count").text.split(" ")[0])
-    # TO DO: write a function to get attribute name of element with try/except block
 
     product = Product(
         title=title,
@@ -56,12 +61,11 @@ def get_single_product(product: WebElement) -> Product:
 
 
 def get_page_products(link: str, start: int = 1) -> List[Product]:
-    with webdriver.Chrome(options=options) as driver:
+    with webdriver.Chrome() as driver:
         driver.get(link)
 
         try:
             driver.find_element(By.ID, "closeCookieBanner").click()
-            print("Click on cookie banner.")
         except NoSuchElementException:
             pass
 
@@ -71,15 +75,12 @@ def get_page_products(link: str, start: int = 1) -> List[Product]:
 
         while more is not None:
             first_xpath = f"/html/body/div[1]/div[3]/div/div[2]/div/div[{start}]"
-            print(start)
 
             try:
                 web_product = driver.find_element(By.XPATH, first_xpath)
                 product = get_single_product(web_product)
-                print(product)
                 page_products.append(product)
             except NoSuchElementException:
-                print("That was the last product, try to click 'more'.")
                 time.sleep(2.0)
                 try:
                     more = driver.find_element(
@@ -87,38 +88,33 @@ def get_page_products(link: str, start: int = 1) -> List[Product]:
                     )
                 except NoSuchElementException as e:
                     more = None
-                    print("There are not 'more'.")
                 else:
-                    print("Try to get more products.")
                     try:
                         more.click()
-                        print("Get more products")
+                        time.sleep(1.5)
                     except ElementNotInteractableException as e:
-                        print("Can't click on MORE")
                         break
+                    else:
+                        continue
             else:
                 start += 1
 
         return page_products
 
 
-def get_all_products(links: list) -> None:
-    for link in links:
-        print(link)
-        print("https://webscraper.io/test-sites/e-commerce/more/computers/laptops/")
-        file_name = f"{link.split('/')[-2]}.csv"
+def get_all_products() -> None:
 
+    for link in ALL_LINKS:
+        file_name = f"{link.split('/')[-1]}.csv"
+        if file_name == "more.csv":
+            file_name = "home.csv"
         page_products = get_page_products(link)
 
-        with open(file_name, "w", encoding="utf-8") as f:
+        with open(file_name, "w") as f:
             writer = csv.writer(f)
             writer.writerow([field.name for field in fields(Product)])
             writer.writerows([astuple(product) for product in page_products])
 
 
 if __name__ == "__main__":
-    # all_links = [
-    #     HOME_URL, COMPUTERS_URL, LAPTOPS_URL, TABLETS_URL, PHONES_URL, TOUCH_PHONES_URL
-    # ]
-    all_links = [LAPTOPS_URL]
-    get_all_products(all_links)
+    get_all_products()
